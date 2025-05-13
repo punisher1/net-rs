@@ -1,13 +1,27 @@
-use app::App;
-
+mod cli;
+mod ui;
+// mod protocols;
+mod config;
+mod crossterm;
+mod utils;
 mod app;
 
-#[tokio::main(flavor = "multi_thread")]
-async fn main() -> Result<(), anyhow::Error> {
-    let mut terminal = ratatui::init();
-    let app = App::default().run(&mut terminal)?;
+use std::time::Duration;
 
-    ratatui::restore();
+use anyhow::Result;
+use cli::args::parse_args;
 
-    Ok(app)
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // 解析命令行参数
+    let args = parse_args();
+
+    // 运行主应用
+    // let app = App::new(args)?;
+    // app.run().await?;
+
+    let tick_rate = Duration::from_millis(100);
+    crossterm::run(tick_rate, true,args);
+    Ok(())
 }
