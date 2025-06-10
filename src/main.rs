@@ -22,6 +22,6 @@ async fn main() -> Result<()> {
     // app.run().await?;
 
     let tick_rate = Duration::from_millis(100);
-    crossterm::run(tick_rate, true,args);
+    crossterm::run(tick_rate, true,args).unwrap();
     Ok(())
 }
