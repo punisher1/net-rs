@@ -1,15 +1,11 @@
 use std::time::Instant;
 
 use anyhow::{Ok, Result};
-use crossterm::
-    event::{KeyCode, KeyModifiers}
-;
+use crossterm::event::{KeyCode, KeyModifiers};
 
 use crate::cli::args::{AppMode, Args, ProtocolType};
 use crate::ui::layout::{AppLayout, LayoutType};
-use crate::ui::widgets::{
-    input_dialog::InputDialog, message_view::MessageView, status_bar::StatusBar,
-};
+use crate::ui::widgets::{input_dialog::InputDialog, message_view::MessageView, status_bar::StatusBar};
 
 /// 应用程序状态
 pub enum InputMode {
@@ -60,8 +56,7 @@ pub struct App {
     pub input_dialog: Option<InputDialog>,
     /// 统计数据
     pub stats: Stats,
-    /// 命令行参数
-    args: Args,
+    pub args: Args,
 }
 
 impl App {
@@ -129,8 +124,9 @@ impl App {
             (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
                 self.should_quit = true;
             }
-            // 输入模式 (Ctrl+I)
-            (KeyCode::Char('i'), KeyModifiers::CONTROL) => {
+
+            // 输入模式 (I)
+            (KeyCode::Char('i'), KeyModifiers::NONE) => {
                 self.input_mode = InputMode::Editing;
                 self.input_dialog = Some(InputDialog::new());
             }

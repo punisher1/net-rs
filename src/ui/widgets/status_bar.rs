@@ -8,7 +8,6 @@ use ratatui::{
 
 use crate::app::App;
 
-
 /// 状态栏组件
 pub struct StatusBar {
     // 状态信息
@@ -44,7 +43,7 @@ impl StatusBar {
 
     /// 绘制底部状态栏 (快捷键提示)
     pub fn draw_bottom_bar(&self, frame: &mut Frame, area: Rect) {
-        let help_text = " Ctrl+C: Quit | Ctrl+I: Input Message ";
+        let help_text = " Ctrl+C: Quit | I: Input Message ";
 
         let help_widget = Paragraph::new(Span::styled(
             help_text,
