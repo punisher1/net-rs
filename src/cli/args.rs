@@ -20,9 +20,25 @@ pub enum Commands {
     #[command(subcommand)]
     Tcp(TcpCommands),
     
+    /// TCP 服务器模式简写
+    #[command(alias = "tcps")]
+    TcpServer(ServerArgs),
+    
+    /// TCP 客户端模式简写
+    #[command(alias = "tcpc")]
+    TcpClient(ClientArgs),
+    
     /// UDP 协议
     #[command(subcommand)]
     Udp(UdpCommands),
+    
+    /// UDP 服务器模式简写
+    #[command(alias = "udps")]
+    UdpServer(ServerArgs),
+    
+    /// UDP 客户端模式简写
+    #[command(alias = "udpc")]
+    UdpClient(ClientArgs),
     
     /// WebSocket 协议
     #[command(alias = "ws", subcommand)]
@@ -180,6 +196,12 @@ pub fn parse_args() -> Args {
                 (ProtocolType::Tcp, AppMode::Client, parse_address(&args.local), Some(parse_address(&args.remote)), None)
             }
         },
+        Commands::TcpServer(args) => {
+            (ProtocolType::Tcp, AppMode::Server, parse_address(&args.address), None, None)
+        },
+        Commands::TcpClient(args) => {
+            (ProtocolType::Tcp, AppMode::Client, parse_address(&args.local), Some(parse_address(&args.remote)), None)
+        },
         Commands::Udp(cmd) => match cmd {
             UdpCommands::Server(args) => {
                 (ProtocolType::Udp, AppMode::Server, parse_address(&args.address), None, None)
@@ -187,6 +209,12 @@ pub fn parse_args() -> Args {
             UdpCommands::Client(args) => {
                 (ProtocolType::Udp, AppMode::Client, parse_address(&args.local), Some(parse_address(&args.remote)), None)
             }
+        },
+        Commands::UdpServer(args) => {
+            (ProtocolType::Udp, AppMode::Server, parse_address(&args.address), None, None)
+        },
+        Commands::UdpClient(args) => {
+            (ProtocolType::Udp, AppMode::Client, parse_address(&args.local), Some(parse_address(&args.remote)), None)
         },
         Commands::WebSocket(cmd) => match cmd {
             WebSocketCommands::Server(args) => {
