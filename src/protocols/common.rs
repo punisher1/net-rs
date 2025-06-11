@@ -11,9 +11,16 @@ use crate::protocols::tcp::TcpServerHandler;
 /// 传输消息类型
 #[derive(Debug, Clone)]
 pub enum MessageType {
+    /// 文本消息
     Text(String),
+    /// 二进制消息
     Binary(Bytes),
+    /// 十六进制消息
     Hex(String),
+    /// 客户端连接消息
+    ClientConnected,
+    /// 客户端断开连接消息
+    ClientDisconnected,
 }
 
 /// 消息方向

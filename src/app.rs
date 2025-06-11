@@ -144,6 +144,14 @@ impl App {
                     common::MessageType::Text(txt) => {
                         self.add_received_message(txt, None);
                     }
+                    common::MessageType::ClientConnected => {
+                        self.receive_view
+                            .add_connection(&message.connection_info.unwrap().connection_id);
+                    }
+                    common::MessageType::ClientDisconnected => {
+                        self.receive_view
+                            .close_connection_by_title(&message.connection_info.unwrap().connection_id);
+                    }
                     common::MessageType::Binary(_) => todo!(),
                     common::MessageType::Hex(_) => todo!(),
                 },

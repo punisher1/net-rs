@@ -96,7 +96,7 @@ impl ProtocolHandler for TcpServerHandler {
                                 // 通知UI有新连接
                                 if let Some(ref server_to_ui_sender) = server_to_ui_tx {
                                     let _ = server_to_ui_sender.send(Message {
-                                        content: MessageType::Text(format!("客户端 {} 已连接", addr)),
+                                        content: MessageType::ClientConnected,
                                         direction: MessageDirection::Received,
                                         timestamp: chrono::Local::now(),
                                         connection_info: Some(ConnectionInfo {
@@ -128,7 +128,7 @@ impl ProtocolHandler for TcpServerHandler {
                                                 if let Some(ref server_to_ui_sender) = server_to_ui_tx_for_read {
                                                     let _ = server_to_ui_sender.send(Message {
                                                         direction: MessageDirection::Received,
-                                                        content: MessageType::Text(format!("客户端 {} 已断开", addr)),
+                                                        content: MessageType::ClientDisconnected,
                                                         timestamp: chrono::Local::now(),
                                                         connection_info: Some(ConnectionInfo {
                                                             remote_addr: addr,
@@ -162,6 +162,8 @@ impl ProtocolHandler for TcpServerHandler {
                                             }
                                         }
                                     }
+
+                                    drop(read_half);
                                 });
 
                                 // 处理客户端写入任务
@@ -172,6 +174,8 @@ impl ProtocolHandler for TcpServerHandler {
                                             break;
                                         }
                                     }
+
+                                    drop(write_half);
                                 });
                             }
                             Err(e) => {

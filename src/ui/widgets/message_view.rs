@@ -31,10 +31,11 @@ impl MessageView {
             tabs: None,
             scroll: 0,
         }
-    }    /// 添加消息
+    }
+    /// 添加消息
     pub fn add_message(&mut self, message: String) {
         self.messages.push(message);
-        
+
         // 自动滚动到底部
         if self.messages.len() > 100 {
             // 保持最新的100条消息，避免内存占用过多
@@ -60,7 +61,7 @@ impl MessageView {
         if self.tabs.is_none() {
             self.tabs = Some(TabsState::new(vec!["Default".to_string()]));
             self.has_multiple_connections = true;
-            
+
             // 将现有消息移到默认标签页
             if let Some(tabs) = &mut self.tabs {
                 for msg in &self.messages {
@@ -92,11 +93,20 @@ impl MessageView {
         }
     }
 
+    pub fn close_connection_by_title(&mut self, title: &str) {
+        if let Some(tabs) = &mut self.tabs {
+            tabs.remove_tab_by_title(title);
+            if tabs.titles.len() <= 1 {
+                self.has_multiple_connections = false;
+            }
+        }
+    }
+
     /// 清除所有消息
     pub fn clear(&mut self) {
         self.messages.clear();
         self.scroll = 0;
-        
+
         if let Some(tabs) = &mut self.tabs {
             for content in &mut tabs.contents {
                 content.clear();
@@ -131,7 +141,7 @@ impl MessageView {
             self.scroll = 0;
         }
     }
-    
+
     /// 下一个标签页
     pub fn next_tab(&mut self) {
         if let Some(tabs) = &mut self.tabs {
@@ -144,13 +154,12 @@ impl MessageView {
         if let Some(tabs) = &mut self.tabs {
             tabs.previous();
         }
-    }    /// 绘制视图
+    }
+    /// 绘制视图
     pub fn draw(&self, frame: &mut Frame, area: Rect) {
         // 创建一个带边框的块
-        let block = Block::default()
-            .title(self.title.clone())
-            .borders(Borders::ALL);
-            
+        let block = Block::default().title(self.title.clone()).borders(Borders::ALL);
+
         // 绘制边框
         frame.render_widget(block.clone(), area);
 
@@ -167,37 +176,34 @@ impl MessageView {
                     Constraint::Min(0),    // 消息内容区高度
                 ])
                 .split(inner_area);
-                
+
             // 绘制标签页
             if let Some(tabs) = &self.tabs {
                 // 渲染标签页标题
-                let titles: Vec<Line> = tabs.titles
-                    .iter()
-                    .map(|t| Line::from(t.as_str()))
-                    .collect();
-                
+                let titles: Vec<Line> = tabs.titles.iter().map(|t| Line::from(t.as_str())).collect();
+
                 let tabs_widget = ratatui::widgets::Tabs::new(titles)
                     .block(Block::default().borders(Borders::BOTTOM))
                     .select(tabs.index)
                     .style(Style::default())
                     .highlight_style(Style::default().fg(Color::LightCyan));
-                    
+
                 frame.render_widget(tabs_widget, chunks[0]);
-                
+
                 // 渲染当前选中标签页的内容
                 if tabs.index < tabs.contents.len() {
                     let messages = &tabs.contents[tabs.index];
                     let max_visible = chunks[1].height as usize;
-                    
+
                     let items: Vec<ListItem> = if !messages.is_empty() {
                         let start_idx = if messages.len() > max_visible {
                             messages.len() - max_visible + self.scroll
                         } else {
                             0
                         };
-                        
+
                         let visible_messages = &messages[start_idx.min(messages.len())..];
-                        
+
                         visible_messages
                             .iter()
                             .map(|m| ListItem::new(Line::from(vec![Span::raw(m)])))
@@ -205,12 +211,12 @@ impl MessageView {
                     } else {
                         Vec::new()
                     };
-                    
+
                     // 创建列表小部件
                     let list = List::new(items)
                         .style(Style::default())
                         .highlight_style(Style::default().fg(Color::LightCyan));
-                        
+
                     frame.render_widget(list, chunks[1]);
                 }
             }
@@ -224,9 +230,9 @@ impl MessageView {
             } else {
                 0
             };
-            
+
             let visible_messages = &self.messages[start_idx.min(self.messages.len())..];
-            
+
             let items: Vec<ListItem> = visible_messages
                 .iter()
                 .map(|m| {
