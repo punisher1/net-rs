@@ -5,6 +5,7 @@ mod config;
 mod crossterm;
 mod utils;
 mod app;
+mod protocols;
 
 use std::time::Duration;
 
@@ -22,6 +23,6 @@ async fn main() -> Result<()> {
     // app.run().await?;
 
     let tick_rate = Duration::from_millis(100);
-    crossterm::run(tick_rate, true,args).unwrap();
+    crossterm::run(tick_rate, true,args).await.unwrap();
     Ok(())
 }

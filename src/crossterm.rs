@@ -12,7 +12,7 @@ use crate::app::App;
 use crate::cli::args::Args;
 use crate::ui::ui;
 
-pub fn run(tick_rate: Duration, enhanced_graphics: bool, args: Args) -> Result<(), Box<dyn Error>> {
+pub async fn run(tick_rate: Duration, enhanced_graphics: bool, args: Args) -> Result<(), Box<dyn Error>> {
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -21,8 +21,9 @@ pub fn run(tick_rate: Duration, enhanced_graphics: bool, args: Args) -> Result<(
     let mut terminal = Terminal::new(backend)?;
 
     // create app and run it
-    let app = App::new(args).unwrap();
-    let app_result = run_app(&mut terminal, app, tick_rate);
+    let mut app = App::new(args).await.unwrap();
+
+    let app_result = run_app(&mut terminal, &mut app, tick_rate).await;
 
     // restore terminal
     disable_raw_mode()?;
@@ -36,10 +37,23 @@ pub fn run(tick_rate: Duration, enhanced_graphics: bool, args: Args) -> Result<(
     Ok(())
 }
 
-fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App, tick_rate: Duration) -> Result<(), Box<dyn Error>> {
+async fn run_app<B: Backend>(
+    terminal: &mut Terminal<B>,
+    app: &mut App,
+    tick_rate: Duration,
+) -> Result<(), Box<dyn Error>> {
     let mut last_tick = Instant::now();
     loop {
-        terminal.draw(|frame| ui::draw(frame, &mut app))?;
+        // 检查应用是否需要退出
+        if app.should_quit {
+            return Ok(());
+        }
+
+        // 接收服务端消息
+        app.receive_message();
+
+        // 绘制界面
+        terminal.draw(|frame| ui::draw(frame, app))?;
 
         // 处理输入事件
         let timeout = tick_rate

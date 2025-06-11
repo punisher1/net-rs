@@ -2,8 +2,11 @@ use anyhow::Result;
 use async_trait::async_trait;
 use bytes::Bytes;
 use chrono::{DateTime, Local};
+use h2::server;
 use std::net::SocketAddr;
 use tokio::sync::mpsc::{Receiver, Sender};
+
+use crate::protocols::tcp::TcpServerHandler;
 
 /// 传输消息类型
 #[derive(Debug, Clone)]
@@ -71,39 +74,43 @@ impl Message {
 pub trait ProtocolHandler {
     /// 启动协议处理器
     async fn start(&mut self) -> Result<()>;
-    
+
     /// 停止协议处理器
     async fn stop(&mut self) -> Result<()>;
-    
+
     /// 发送消息
     async fn send_message(&mut self, message: MessageType, target: Option<String>) -> Result<()>;
-    
-    /// 获取消息接收通道
-    fn get_receiver(&self) -> Option<Receiver<Message>>;
-    
-    /// 设置消息发送通道 (用于向UI发送消息)
-    fn set_ui_sender(&mut self, sender: Sender<Message>);
-    
+
+    /// 获取UI向服务端的发送通道
+    fn get_ui_to_server_sender(&self) -> Option<Sender<Message>>;
+
+    /// 设置服务端向UI的发送通道
+    fn set_server_to_ui_sender(&mut self, sender: Sender<Message>);
+
     /// 处理程序是否正在运行
     fn is_running(&self) -> bool;
-    
+
     /// 获取当前连接信息
     fn get_connections(&self) -> Vec<ConnectionInfo>;
-    
+
     /// 获取协议名称
     fn protocol_name(&self) -> &'static str;
 }
 
 /// 创建协议处理器工厂函数
-pub fn create_protocol_handler(
-    protocol: &str, 
+pub async fn create_protocol_handler(
+    protocol: &str,
     is_server: bool,
+    server_to_ui_tx: Option<Sender<Message>>,
     local_addr: SocketAddr,
     remote_addr: Option<SocketAddr>,
-) -> Result<Box<dyn ProtocolHandler + Send>> {
+) -> Result<Box<dyn ProtocolHandler + Send + Sync>> {
     match (protocol.to_lowercase().as_str(), is_server) {
         ("tcp", true) => {
-            todo!("Create TCP server handler")
+            let mut handler = TcpServerHandler::new(local_addr);
+            handler.set_server_to_ui_sender(server_to_ui_tx.unwrap());
+            handler.start().await?;
+            Ok(Box::new(handler))
         }
         ("tcp", false) => {
             todo!("Create TCP client handler")

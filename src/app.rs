@@ -2,10 +2,13 @@ use std::time::Instant;
 
 use anyhow::{Ok, Result};
 use crossterm::event::{KeyCode, KeyModifiers};
+use tokio::sync::mpsc::{channel, unbounded_channel, Receiver};
 
 use crate::cli::args::{AppMode, Args, ProtocolType};
+use crate::protocols::{common, Message, ProtocolHandler};
 use crate::ui::layout::{AppLayout, LayoutType};
 use crate::ui::widgets::{input_dialog::InputDialog, message_view::MessageView, status_bar::StatusBar};
+// use crate
 
 /// 应用程序状态
 pub enum InputMode {
@@ -56,11 +59,17 @@ pub struct App {
     pub input_dialog: Option<InputDialog>,
     /// 统计数据
     pub stats: Stats,
+    /// UI到服务端的消息发送通道
+    // pub ui_to_server_tx: Option<Sender<Message>>,
+    /// 协议处理器
+    pub protocol_handler: Box<dyn ProtocolHandler + Send + Sync>,
+    /// 服务端到UI的消息接收通道
+    pub server_to_ui_rx: Option<Receiver<Message>>,
     pub args: Args,
 }
 
 impl App {
-    pub fn new(args: Args) -> Result<Self> {
+    pub async fn new(args: Args) -> Result<Self> {
         // 根据参数确定布局方式
         let layout_type = if args.vertical_layout {
             LayoutType::VerticalSplit
@@ -68,10 +77,19 @@ impl App {
             LayoutType::HorizontalSplit
         };
 
+        let (server_to_ui_tx, server_to_ui_rx) = channel::<Message>(1000);
+        // let mut ui_to_server_tx = None;
+
         // 设置发送和接收视图的标题
         let (send_title, recv_title) = match args.protocol {
             ProtocolType::Tcp => match args.mode {
-                AppMode::Server => ("TCP Server Send", "TCP Server Receive"),
+                AppMode::Server => {
+                    // TCP Server 模式
+                    // let mut handler = common::create_protocol_handler("tcp", true, args.local_addr, None).await?;
+                    // ui_to_server_tx = handler.get_ui_to_server_sender();
+
+                    ("TCP Server Send", "TCP Server Receive")
+                }
                 AppMode::Client => ("TCP Client Send", "TCP Client Receive"),
             },
             ProtocolType::Udp => match args.mode {
@@ -96,7 +114,10 @@ impl App {
             },
         };
 
-        Ok(Self {
+        let handler =
+            common::create_protocol_handler("tcp", true, Some(server_to_ui_tx), args.local_addr, None).await?;
+
+        let app = Self {
             should_quit: false,
             input_mode: InputMode::Normal,
             layout: AppLayout::new(layout_type),
@@ -105,8 +126,32 @@ impl App {
             status_bar: StatusBar::default(),
             input_dialog: None,
             stats: Stats::default(),
+            // ui_to_server_tx,
+            protocol_handler: handler,
+            server_to_ui_rx: Some(server_to_ui_rx),
             args,
-        })
+        };
+
+        Ok(app)
+    }
+
+    pub fn receive_message(&mut self) {
+        // 从 Option 中取出接收器的所有权
+        if let Some(server_to_ui_rx) = self.server_to_ui_rx.as_mut() {
+            // 处理接收到的消息
+            match server_to_ui_rx.try_recv() {
+                core::result::Result::Ok(message) => match message.content {
+                    common::MessageType::Text(txt) => {
+                        self.add_received_message(txt, None);
+                    }
+                    common::MessageType::Binary(_) => todo!(),
+                    common::MessageType::Hex(_) => todo!(),
+                },
+                core::result::Result::Err(_) => {
+                    // 没有消息可接收，继续执行
+                }
+            }
+        }
     }
 
     /// 处理按键事件
@@ -164,7 +209,6 @@ impl App {
         Ok(())
     }
 
-    /// 模拟发送消息的方法，实际实现将连接到网络协议
     fn send_message(&mut self, message: String) {
         // 更新统计数据
         self.stats.sent_bytes += message.len();
@@ -173,6 +217,8 @@ impl App {
         // 添加消息到发送视图
         self.send_view
             .add_message(format!("[{}] {}", chrono::Local::now().format("%H:%M:%S"), message));
+
+        todo!("发送消息逻辑需要根据具体协议实现");
     }
 
     /// 添加接收到的消息
